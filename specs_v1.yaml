@@ -1,0 +1,209 @@
+# Metadata
+swagger: '2.0'
+info:
+  title: BookStore API
+  version: '1'
+ # Optional fields
+  description: What if I tell you that your specs are broken @PyConDE 2019
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+  contact:
+    name: Samuele Maci
+    url: https://github.com/macisamuele
+ # A link to a website that describes the different policies
+  termsOfService: https://de.pycon.org/privacy-policy/
+
+# Servers information (Optional but recommended values)
+schemes: [http, https]
+host: book-store.de.pycon.org
+basePath: /
+consumes: [application/json]
+produces: [application/json]
+
+
+securityDefinitions:
+  AuthToken:
+    description: >
+      Token provided to the user during the login phase.
+    in: header
+    name: X-Token
+    type: apiKey
+security:
+- AuthToken: []
+
+definitions:
+  Author:
+    description: Detailed information of the Book Author
+    properties:
+      name:
+        description: Name of the author
+        type: string
+    required: [name]
+    type: object
+    title: Author  # important for eventual Code Generation
+  Book:
+    properties:
+      authors:
+        description: Authors of the book
+        items: {$ref: '#/definitions/Author'}
+        minItems: 1
+        type: array
+      isbn:
+        description: Unique identifier of the book
+        type: string
+      releaseDate:
+        description: Release date of the book ([RFC 3339](https://tools.ietf.org/html/rfc3339) format, aka YYYY-MM-DD)
+        type: string
+        format: date
+      title:
+        description: Title of the book
+        type: string
+    required: [authors, isbn, releaseDate, title]
+    type: object
+    title: Book
+  SearchResult:
+    properties:
+      books:
+        items: {$ref: '#/definitions/Book'}
+        type: array
+    required: [books]
+    type: object
+    title: SearchResult
+  SigninResponse:
+    properties:
+      auth_token:
+        type: string
+    required: [auth_token]
+    type: object
+    title: SigninResponse
+
+paths:
+  /v1/signin:
+    post:
+      operationId: v1_signin
+      parameters:
+      - name: body
+        in: body
+        schema:
+          properties:
+            password:
+              type: string
+              format: password
+            user:
+              type: string
+          required: [password, user]
+      responses:
+        '200':
+          description: Authentication token
+          schema: {$ref: '#/definitions/SigninResponse'}
+      security: []  # Override default security
+      summary: Log in a user into the BookStore system
+      tags: [account]
+  /v1/signup:
+    post:
+      operationId: v1_signup
+      parameters:
+      - name: body
+        in: body
+        schema:
+          properties:
+            password:
+              type: string
+              format: password
+            user:
+              type: string
+          required: [password, user]
+      responses:
+        '201': {description: HTTP/201 Created}
+      summary: Register a user into the BookStore system
+      tags: [account]
+  /v1/book:
+    get:
+      operationId: v1_book
+      parameters:
+      - description: Search a book by `query`
+        name: query
+        type: string
+        required: true
+        in: query
+      - description: Minimum release date
+        name: releaseDate
+        type: string
+        format: date
+        required: false
+        in: query
+      responses:
+        '200':
+          description: HTTP/200 Ok
+          schema: {$ref: '#/definitions/SearchResult'}
+      summary: Retrieve the book catalogue
+      tags: [book]
+  /v1/book/{isbn}:
+    get:
+      operationId: v1_book_isbn
+      parameters:
+      - description: '[ISBN](https://en.wikipedia.org/wiki/International_Standard_Book_Number) of the book to retrieve details'
+        name: isbn
+        type: string
+        required: true
+        in: path
+      responses:
+        '200':
+          description: HTTP/200 Ok
+          schema: {$ref: '#/definitions/Book'}
+      summary: Retrieve book details
+      tags: [book]
+  /v1/book/buy/{isbn}:
+    post:
+      operationId: v1_book_buy
+      parameters:
+      - description: '[ISBN](https://en.wikipedia.org/wiki/International_Standard_Book_Number) of the book to buy'
+        name: isbn
+        type: string
+        required: true
+        in: path
+      responses:
+        '201': {description: HTTP/201 Created}
+        '406': {description: HTTP/406 Not Acceptable}
+      summary: Buy a book from the BookStore
+      tags: [book]
+  /v1/book/borrow/{isbn}/{start_date}:
+    post:
+      operationId: v1_book_borrow
+      parameters:
+      - description: '[ISBN](https://en.wikipedia.org/wiki/International_Standard_Book_Number) of the book to borrow'
+        name: isbn
+        type: string
+        required: true
+        in: path
+      - description: Day in which you want to go and pick the book from the BookStore
+        name: start_date
+        type: string
+        format: date
+        required: true
+        in: path
+      responses:
+        '201': {description: HTTP/201 Created}
+        '406': {description: HTTP/406 Not Acceptable}
+      summary: Borrow a book from the BookStore
+      tags: [book]
+  /v1/book/sell/{isbn}:
+    post:
+      operationId: v1_book_sell
+      parameters:
+      - description: '[ISBN](https://en.wikipedia.org/wiki/International_Standard_Book_Number) of the book to sell'
+        name: isbn
+        type: string
+        required: true
+        in: path
+      - description: Details of the book to sell to the BookStore
+        name: body
+        required: true
+        in: body
+        schema: {$ref: '#/definitions/Book'}
+      responses:
+        '201': {description: HTTP/201 Created}
+        '406': {description: HTTP/406 Not Acceptable}
+      summary: Sell a book to the BookStore
+      tags: [book]
